@@ -15,3 +15,7 @@ OPENAI_BASE_URL=https://api.deepseek.com/v1
 ```
 # 2.依据webserver/fastapi 的接口
 > fastapi接口提供了文本比较、ai-agent stream 流式处理等处理参考
+
+# 3. 待做：持久化处理
+> 以lang_neo4j、langraph、embedding model 实现持久化以及 RAG 系统的构建
+> 以 `user`为节点 纪录个人信息和文本关系相关
