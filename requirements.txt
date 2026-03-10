@@ -1,0 +1,15 @@
+neo4j>=5.25.0
+# kafka-python==2.0.2
+six==1.16.0
+python-dotenv==1.0.0
+fastapi==0.104.1
+uvicorn==0.23.2
+langchain-openai==0.2.10
+langchain-ollama==0.2.1
+langchain-community==0.3.14
+langchain-neo4j==0.3.0
+langchain>=0.3.25
+langchain-core>=0.3.21,<0.4.0
+httpx==0.28.1
+beautifulsoup4==4.12.3
+lxml==5.1.0
