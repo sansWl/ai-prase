@@ -7,7 +7,7 @@ load_dotenv()
 class EmbeddingFactory:
     def __init__(self):
         self.embedding_type = os.getenv('EMBEDDING_TYPE')
-        self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        self.openai_api_key = os.getenv('OPENAI_EMBEDDING_API_KEY')
         self.openai_api_base_url = os.getenv('OPENAI_API_BASE_URL')
         self.openai_embedding_model = os.getenv('EMBEDDING_MODEL')
         self.ollama_base_url = os.getenv('OLLAMA_BASE_URL')
