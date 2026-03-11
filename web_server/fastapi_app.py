@@ -31,7 +31,7 @@ def initialize_clients():
         llm_factory = None
     
     try:
-        embedding_factory = EmbeddingFactory()
+        embedding_factory = EmbeddingFactory().create_embedding()
     except Exception as e:
         print(f"Warning: Failed to initialize Embedding factory: {e}")
         embedding_factory = None

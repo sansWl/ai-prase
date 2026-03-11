@@ -8,6 +8,7 @@ class EmbeddingFactory:
     def __init__(self):
         self.embedding_type = os.getenv('EMBEDDING_TYPE')
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        self.openai_api_base_url = os.getenv('OPENAI_API_BASE_URL')
         self.openai_embedding_model = os.getenv('EMBEDDING_MODEL')
         self.ollama_base_url = os.getenv('OLLAMA_BASE_URL')
         self.ollama_embedding_model = os.getenv('OLLAMA_EMBEDDING_MODEL')
@@ -20,10 +21,11 @@ class EmbeddingFactory:
             return self.embedding_models[embedding_type]
 
         if embedding_type == 'openai':
-            from langchain_openai import OpenAIEmbeddings
-            embedding_model = OpenAIEmbeddings(
+            from langchain_community.embeddings import DashScopeEmbeddings
+            embedding_model = DashScopeEmbeddings(
                 model=self.openai_embedding_model,
-                api_key=self.openai_api_key
+                dashscope_api_key=self.openai_api_key,
+                # base_url=self.openai_api_base_url
             )
         elif embedding_type == 'ollama':
             from langchain_ollama import OllamaEmbeddings
