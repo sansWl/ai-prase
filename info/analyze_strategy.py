@@ -19,7 +19,7 @@ info_map_1024vector={
     }   
     
 
-def getTextchunk_info(text,info_map:dict = info_map_1024vector,threshold:float=0.75):
+def getTextchunk_info(text,info_map:dict = info_map_1024vector,threshold:float=0.78):
     """从文本中提取信息块
     
     Args:
@@ -55,19 +55,27 @@ def get_textLine_embedding(text:str,info_map:dict,threshold:float):
     line_embeddings=[]
     result={}
     for line in text.splitlines():
-        # if line=='':
-        #     continue
+        if line=='':
+            continue
         line=line.strip()
         line_embeddings.append(line)
     # 计算所有行的嵌入(一次计算所有行的嵌入，避免重复调用接口)
-    line_embedding = embedding_tool.get_instance().embed_documents(line_embeddings)
+    # 分批调用，每次最多 10 条
+    batch_size = 10
+    line_embedding = []
+    for i in range(0, len(line_embeddings), batch_size):
+        batch = line_embeddings[i:i+batch_size]
+        batch_vectors = embedding_tool.get_instance().embed_documents(batch)
+        line_embedding.extend(batch_vectors)
+    # line_embedding = embedding_tool.get_instance().embed_documents(line_embeddings)
     
     for i,embedding in enumerate(line_embedding,start=0):
         for info_name, info_embedding in info_map.items():
             # 计算相似度（使用余弦相似度）
             similarity = embedding_tool.cosine_similarity(embedding, info_embedding)
             if similarity >= threshold:
-                result[info_name]=i
+                if info_name not in result:
+                    result[info_name]=i
                 break
 
     return result,line_embeddings

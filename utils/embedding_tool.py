@@ -23,7 +23,7 @@ class EmbeddingTool:
         """对单个文本进行 embedding"""
         return self.embedding_model.embed_query(text)
     
-    def embed_documents(self, documents: list, embedding_type: str = None):
+    def embed_documents(self, documents: list):
         """对多个文档进行 embedding"""
         return self.embedding_model.embed_documents([doc.page_content if hasattr(doc, 'page_content') else doc for doc in documents])
     

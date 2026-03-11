@@ -21,11 +21,12 @@ class EmbeddingFactory:
             return self.embedding_models[embedding_type]
 
         if embedding_type == 'openai':
-            from langchain_community.embeddings import DashScopeEmbeddings
-            embedding_model = DashScopeEmbeddings(
+            from langchain_openai import OpenAIEmbeddings
+            embedding_model = OpenAIEmbeddings(
                 model=self.openai_embedding_model,
-                dashscope_api_key=self.openai_api_key,
-                # base_url=self.openai_api_base_url
+                api_key=self.openai_api_key,
+                base_url=self.openai_api_base_url,
+                check_embedding_ctx_length = False
             )
         elif embedding_type == 'ollama':
             from langchain_ollama import OllamaEmbeddings
