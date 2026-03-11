@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  ai-prase:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-prase-container
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/heartbeat"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
+    networks:
+      - ai-prase-network
+    volumes:
+      - ./cache_data:/app/cache_data
+
+networks:
+  ai-prase-network:
+    driver: bridge
