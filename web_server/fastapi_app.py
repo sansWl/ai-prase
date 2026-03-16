@@ -1,39 +1,35 @@
 from fastapi import FastAPI, File, UploadFile, APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from middleware.neo4j_client import Neo4jClient
+from utils import redisUtils, logger,neo4jUtils,crypto_utils,env_config
 from utils.rag_system import get_rag_system
 from factories.llmsFactory.llms_factory import LLMsFactory
 from factories.embeddingFactory.embedding_factory import EmbeddingFactory
-from utils.file_convert import convert_file_to_md
-from info.analyze_strategy import getTextchunk_info
 from web_server.global_handler.exception_handler import register_exception_handlers
 from web_server.global_handler.cors_config import setup_cors
-from utils.embedding_tool import embedding_instance, get_instance
+from utils.embedding_tool import  get_instance
 from utils.llm_prompt.llm_utils import create_normal_agent
-import utils.env_config as env_config
 from contextlib import asynccontextmanager
+from typing import Generic, TypeVar, Optional
+import web_server.class_model.user as user_model
 import io
+from web_server.service import user_service, file_service
+
+
 
 def initialize_clients():
-    global neo4j_client, llm_factory, embedding_factory,embedding_tool 
-    try:
-        neo4j_client = Neo4jClient()
-    except Exception as e:
-        print(f"Warning: Failed to initialize Neo4j client: {e}")
-        neo4j_client = None
-    
+    global llm_factory, embedding_factory,embedding_tool     
     try:
         llm_factory = LLMsFactory()
         embedding_tool = get_instance()
     except Exception as e:
-        print(f"Warning: Failed to initialize LLM factory: {e}")
+        logger.warning(f"Failed to initialize LLM factory: {e}")
         llm_factory = None
     
     try:
         embedding_factory = EmbeddingFactory().create_embedding()
     except Exception as e:
-        print(f"Warning: Failed to initialize Embedding factory: {e}")
+        logger.warning(f"Failed to initialize Embedding factory: {e}")
         embedding_factory = None
 
 
@@ -41,7 +37,7 @@ def initialize_clients():
 async def lifespan(app: FastAPI):
     initialize_clients()
     yield
-    print("应用程序关闭...")
+    logger.info("应用程序关闭...")
 
 app = FastAPI(lifespan=lifespan)
 
@@ -49,7 +45,7 @@ file_router = APIRouter(prefix="/api/file")
 config_router = APIRouter(prefix="/api/config")
 llm_react_router = APIRouter(prefix="/api/llm/react")
 simila_router = APIRouter(prefix="/api/similarity")
-
+user_router = APIRouter(prefix="/api/user")
 # 注册全局异常处理器
 register_exception_handlers(app)
 
@@ -57,14 +53,19 @@ register_exception_handlers(app)
 setup_cors(app)
 
 # 全局客户端实例
-neo4j_client = None
 llm_factory = None
 embedding_factory = None
 embedding_tool = None
+T = TypeVar("T")
 
 class BatchSimilarityRequest(BaseModel):
     query: str
     documents: list
+
+class Response(BaseModel, Generic[T]):
+    code: int = 0
+    message: str = "OK"
+    data: Optional[T] = None
 
 
 @app.get("/heartbeat")
@@ -87,6 +88,27 @@ async def heartbeat():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@user_router.post("/register")
+async def register_user(user: user_model.UserInfoRequest):
+    user = user_service.user_register(user)
+    if not user:
+        return Response(code=886, message="User already exists")
+    return Response(data=user)
+
+@user_router.post("/login")
+async def login_user(user: user_model.UserInfoRequest):
+    user = user_service.user_login(user)
+    if not user:
+        return Response(code=886, message="Invalid credentials")
+    return Response(data=user)
+
+@user_router.get("/rememberMe")
+async def get_user_remember_me(token: str):
+    user = user_service.get_user_remember_me(token)
+    if not user:
+        return Response(code=886, message="User not found")
+    return Response(data=user)
+
 
 @simila_router.post("/documents/similarity")
 async def document_similarity(request: BatchSimilarityRequest):
@@ -96,7 +118,7 @@ async def document_similarity(request: BatchSimilarityRequest):
 @file_router.post("/info/analyze")
 async def analyze_info(file: UploadFile = File(...)):
     content = await file.read()
-    info_chunks = getTextchunk_info(convert_file_to_md(io.BytesIO(content)))
+    info_chunks = await file_service.get_textchunk_info(content)
     return {"status": "success", "info_chunks": info_chunks}
 
 @config_router.get("/env/configs")
@@ -117,3 +139,4 @@ app.include_router(file_router)
 app.include_router(config_router)
 app.include_router(llm_react_router)
 app.include_router(simila_router)
+app.include_router(user_router)

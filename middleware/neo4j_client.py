@@ -1,8 +1,11 @@
 import os
 from dotenv import load_dotenv
 from langchain_neo4j import Neo4jGraph
+from utils.logger import get_logger
 
 load_dotenv()
+
+logger = get_logger()
 
 
 class Neo4jClient:
@@ -10,6 +13,7 @@ class Neo4jClient:
         self.uri = os.getenv('NEO4J_URI')
         self.user = os.getenv('NEO4J_USER')
         self.password = os.getenv('NEO4J_PASSWORD')
+        self.database = os.getenv('NEO4J_DATABASE', 'neo4j')
         self.graph = None
         self.connect()
     
@@ -18,10 +22,12 @@ class Neo4jClient:
             self.graph = Neo4jGraph(
                 url=self.uri,
                 username=self.user,
-                password=self.password
+                password=self.password,
+                database=self.database
             )
+            logger.info(f"Successfully connected to Neo4j database '{self.database}'")
         except Exception as e:
-            print(f"Warning: Could not connect to Neo4j: {e}")
+            logger.warning(f"Could not connect to Neo4j: {e}")
             self.graph = None
     
     def close(self):
@@ -30,32 +36,47 @@ class Neo4jClient:
     
     def execute_query(self, query, parameters=None):
         if not self.graph:
-            raise ValueError("Not connected to Neo4j")
+            logger.warning("Not connected to Neo4j, returning empty result")
+            return []
         
-        result = self.graph.query(query, parameters or {})
-        return result
+        try:
+            result = self.graph.query(query, parameters or {})
+            return result
+        except Exception as e:
+            logger.error(f"Neo4j query error: {e}")
+            return []
     
     def execute_write(self, query, parameters=None):
         if not self.graph:
-            raise ValueError("Not connected to Neo4j")
+            logger.warning("Not connected to Neo4j, skipping write operation")
+            return []
         
-        result = self.graph.query(query, parameters or {})
-        return result
+        try:
+            result = self.graph.query(query, parameters or {})
+            return result
+        except Exception as e:
+            logger.error(f"Neo4j write error: {e}")
+            return []
     
     def add_document(self, text, metadata=None):
         if not self.graph:
-            raise ValueError("Not connected to Neo4j")
+            logger.warning("Not connected to Neo4j, skipping document addition")
+            return []
         
-        query = """
-        CREATE (d:Document {
-            text: $text,
-            metadata: $metadata,
-            created_at: datetime()
-        })
-        RETURN d
-        """
-        result = self.graph.query(query, {
-            'text': text,
-            'metadata': metadata or {}
-        })
-        return result
+        try:
+            query = """
+            CREATE (d:Document {
+                text: $text,
+                metadata: $metadata,
+                created_at: datetime()
+            })
+            RETURN d
+            """
+            result = self.graph.query(query, {
+                'text': text,
+                'metadata': metadata or {}
+            })
+            return result
+        except Exception as e:
+            logger.error(f"Neo4j add document error: {e}")
+            return []
