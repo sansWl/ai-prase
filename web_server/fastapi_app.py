@@ -1,6 +1,8 @@
+from threading import Thread
 from fastapi import FastAPI, File, UploadFile, APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from factories.threadFactory.redis_channel import asynio_instance
 from utils import redisUtils, logger,neo4jUtils,crypto_utils,env_config
 from utils.rag_system import get_rag_system
 from factories.llmsFactory.llms_factory import LLMsFactory
@@ -16,7 +18,7 @@ from web_server.class_model import (
     graph
 )
 import io
-from web_server.service import user_service, file_service, graph_service
+from web_server.service import user_service, file_service, graph_service,redis_listener
 
 
 
@@ -39,6 +41,8 @@ def initialize_clients():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize_clients()
+    # 启动 Redis 监听器（后台协程运行）
+    await redis_listener.start_listeners()
     yield
     logger.info("应用程序关闭...")
 

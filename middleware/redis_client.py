@@ -1,13 +1,11 @@
 import os
 import json
 import redis
-from typing import Optional, Any, Union
+from typing import Optional, Union, List, Any
 from dotenv import load_dotenv
-from utils.logger import get_logger
+from utils import logger
 
 load_dotenv()
-
-logger = get_logger()
 
 
 class RedisClient:
@@ -472,6 +470,65 @@ class RedisClient:
             self._client = None
             logger.info("Redis 连接已关闭")
 
+    # ==================== pub/sub ====================
+
+    def producer_task(self, key:str, channel: str, queue_task: str, message: Union[str, List[str]]):
+        """发布消息到频道"""
+        if self._client is None:
+            logger.error("Redis 客户端未初始化")
+            return
+        
+        try:
+            
+            # 确保 message 是列表
+            if isinstance(message, str):
+                message = [message]
+            
+            # 构建Lua脚本
+            lua_script = """
+            local channel = KEYS[1]
+            local key = KEYS[2]
+            local queue_task = ARGV[1]
+            
+            -- 从ARGV[2]开始处理消息
+            for i = 2, #ARGV do
+                redis.call('LPUSH', key, ARGV[i])
+            end
+            
+            -- 发布通知
+            redis.call("publish", channel, queue_task)
+            """
+            
+            # 构建参数列表
+            args = [channel, key, queue_task]
+            args.extend(message)
+            
+            # 执行Lua脚本
+            self._client.eval(lua_script, 2, *args)
+        except Exception as e:
+            logger.error(f"Redis publish 错误: {e}")
+    
+    def consumer_task(self, key: str, timeout: int = None):
+        """从队列消费任务
+        key: 队列名称
+        timeout: 超时时间（秒）
+        """
+        if self._client is None:
+            logger.error("Redis 客户端未初始化")
+            return None
+        
+        try:
+            # 从列表右侧弹出元素（FIFO队列）
+            pubsub = self._client.pubsub()
+            pubsub.subscribe(key)
+            for message in pubsub.listen():
+                logger.info(f"消费消息: {message}")
+                if message['type'] == 'message':
+                    return message['data'].decode('utf-8')
+            return None
+        except Exception as e:
+            logger.error(f"Redis consumer 错误: {e}")
+            return None
 
 # 全局 Redis 客户端实例
 redis_client = RedisClient()

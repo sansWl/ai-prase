@@ -1,11 +1,10 @@
 import os
 from dotenv import load_dotenv
 from langchain_neo4j import Neo4jGraph
-from utils.logger import get_logger
+from utils import logger
 
 load_dotenv()
 
-logger = get_logger()
 
 
 class Neo4jClient:
